@@ -12,6 +12,7 @@
 #include "fsp.h"
 #include "uart.h"
 
+#define COPC_CMD_MAX_LEN	32
 typedef struct _COMMON_FRAME_
 {
 	uint8_t Cmd;	
@@ -185,15 +186,12 @@ typedef struct _IOU_GET_PARAM_RESPONSE_FRAME_
 	uint8_t			Temp_NTC_channel_2_low;
 	uint8_t			Temp_NTC_channel_3_high;
 	uint8_t			Temp_NTC_channel_3_low;
-
 	uint8_t			Temp_onewire_channel_0_high;
 	uint8_t			Temp_onewire_channel_0_low;
 	uint8_t			Temp_onewire_channel_1_high;
 	uint8_t			Temp_onewire_channel_1_low;
-
 	uint8_t			Temp_i2c_sensor_high;
 	uint8_t			Temp_i2c_sensor_low;
-
 	uint8_t			Temp_setpoint_channel_0_high;
 	uint8_t			Temp_setpoint_channel_0_low;
 	uint8_t			Temp_setpoint_channel_1_high;
@@ -202,7 +200,6 @@ typedef struct _IOU_GET_PARAM_RESPONSE_FRAME_
 	uint8_t			Temp_setpoint_channel_2_low;
 	uint8_t			Temp_setpoint_channel_3_high;
 	uint8_t			Temp_setpoint_channel_3_low;
-
 	uint8_t			Voltage_out_tec_channel_0_high;
 	uint8_t			Voltage_out_tec_channel_0_low;
 	uint8_t			Voltage_out_tec_channel_1_high;
@@ -211,14 +208,56 @@ typedef struct _IOU_GET_PARAM_RESPONSE_FRAME_
 	uint8_t			Voltage_out_tec_channel_2_low;
 	uint8_t			Voltage_out_tec_channel_3_high;
 	uint8_t			Voltage_out_tec_channel_3_low;
-
 	uint8_t			Neo_led_R;
 	uint8_t			Neo_led_G;
 	uint8_t			Neo_led_B;
 	uint8_t			Neo_led_W;
-	
 	uint8_t			IRled_duty;
+	uint16_t		accel_x;
+	uint16_t		accel_y;
+	uint16_t		accel_z;
+	uint16_t		gyro_x;
+	uint16_t		gyro_y;
+	uint16_t		gyro_z;
+	uint16_t		press;
 }IOU_GET_PARAM_RESPONSE_FRAME;
+
+typedef struct _IOU_GET_TEC_STATUS_RESPONSE_FRAME_ {
+uint8_t			Cmd;
+
+uint16_t		Temp_NTC_channel_0;
+uint16_t		Temp_NTC_channel_1;
+uint16_t		Temp_NTC_channel_2;
+uint16_t		Temp_NTC_channel_3;
+
+uint16_t		Temp_i2c_sensor;
+
+uint16_t		Temp_setpoint_channel_0;
+uint16_t		Temp_setpoint_channel_1;
+uint16_t		Temp_setpoint_channel_2;
+uint16_t		Temp_setpoint_channel_3;
+	
+uint16_t		Voltage_out_now_tec_channel_0;
+uint16_t		Voltage_out_now_tec_channel_1;
+uint16_t		Voltage_out_now_tec_channel_2;
+uint16_t		Voltage_out_now_tec_channel_3;
+	
+uint8_t			TEC_auto_channel_0;
+uint8_t			TEC_auto_channel_1;
+uint8_t			TEC_auto_channel_2;
+uint8_t			TEC_auto_channel_3;
+	
+uint8_t			TEC_ena_channel_0;
+uint8_t			TEC_ena_channel_1;
+uint8_t			TEC_ena_channel_2;
+uint8_t			TEC_ena_channel_3;
+	
+uint8_t			TEC_mode_channel_0;
+uint8_t			TEC_mode_channel_1;
+uint8_t			TEC_mode_channel_2;
+uint8_t			TEC_mode_channel_3;
+	
+}IOU_GET_TEC_STATUS_RESPONSE_FRAME;
 
 typedef union _IOU_Sfp_Payload_{
 	COMMON_FRAME							commonFrame;
@@ -229,6 +268,7 @@ typedef union _IOU_Sfp_Payload_{
 	IOU_GET_ACCEL_GYRO_RESPONSE_FRAME		iouGetAccelGyroResponseFrame;
 	IOU_GET_PRESS_RESPONSE_FRAME			iouGetPressResponseFrame;
 	IOU_GET_PARAM_RESPONSE_FRAME			iouGetParamResponseFrame;
+	IOU_GET_TEC_STATUS_RESPONSE_FRAME		iouGetTECResponseFrame;
 }IOU_Sfp_Payload_t;
 
 void	COPC_init(void);

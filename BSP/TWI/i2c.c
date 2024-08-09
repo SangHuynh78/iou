@@ -2,7 +2,6 @@
  * I2C Library for AVR Devices
  * ------------------------------------------------------------------ */
 
-#define F_CPU 800000UL
 #include "i2c.h"
 #include "IOU_board.h"
 /**
@@ -11,7 +10,7 @@
 void i2c_init ( void )
 {
     TWCR = 1 << TWEN ;
-    TWBR = (F_CPU / I2C_CONFIG_F_SCL - 16 ) / 2;
+    TWBR = ( F_CPU / I2C_CONFIG_F_SCL - 16 ) / 2;
 }
 
 /**

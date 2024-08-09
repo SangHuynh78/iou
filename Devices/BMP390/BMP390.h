@@ -10,12 +10,13 @@
 #define BMP390_H_
 
 #include <stdint.h>
-#include <stdbool.h>
 #include <util/twi.h>
 #include <avr/io.h>
 #include <stddef.h>
 #include <math.h>
 #include <util/delay.h>
+#include <stdbool.h>
+#include "twi.h"
 
 // Calibration data structure for BMP390
 typedef struct {
@@ -52,14 +53,19 @@ typedef struct {
 	float	f_PAR_P11;
 } _BMP390_Calib_Data_;
 
-#define BMP390_AVAIL	1
-#define BMP390_UNAVAIL	0
+typedef enum {
+	BMP390_MODE_SLEEP	= 0,
+	BMP390_MODE_FORCED	= 1,
+	BMP390_MODE_NORMAL	= 3
+} BMP390_Mode;
 
 typedef enum {
-	BMP390_MODE_SLEEP = 0,
-	BMP390_MODE_FORCED = 1,
-	BMP390_MODE_NORMAL = 3
-} BMP390_Mode;
+	BMP390_SUCCESS				= 0,   // No error
+	BMP390_ERROR_UNKNOWN		= 1,   // Unknown error
+	BMP390_ERROR_SET_MODE		= 2,   // BMP390 set mode error
+	BMP390_ERROR_READ_CALIB		= 3,   // BMP390 read raw calib error
+	BMP390_ERROR_READ_TEMPRESS	= 4    // BMP390 read temp, pressure error
+} BMP390_ERROR;
 
 // Data structure for the BMP390 sensor
 typedef struct _BMP390_Data_
@@ -71,17 +77,21 @@ typedef struct _BMP390_Data_
 	uint8_t chipID;
 	_BMP390_Raw_Calib_Data_ NVM;	// RAW Calibration data
 	_BMP390_Calib_Data_		PAR;
+	TWI_ERROR			TWI_ERR;
+	BMP390_ERROR		BMP390_ERR;
 }BMP390_Data;
+
+extern BMP390_Data TempPress_data;
 
 bool	BMP390_read_raw_calibration(BMP390_Data *data);
 void	BMP390_convert_calibration(BMP390_Data *data);
 void	BMP390_set_mode(BMP390_Mode mode);
-bool	BMP390_init(void);
+bool BMP390_init(void);
 void	BMP390_read_raw_temp_press(BMP390_Data *data);
 void	BMP390_compensate_temperature(BMP390_Data *data);
 void	BMP390_compensate_pressure(BMP390_Data *data);
 void	BMP390_temp_press_update(void);
-int16_t		get_BMP390_temperature(void);
-uint16_t	get_BMP390_pressure(void);
+int16_t	get_BMP390_temperature(void);
+int16_t	get_BMP390_pressure(void);
 
 #endif /* BMP390_H_ */

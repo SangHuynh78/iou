@@ -82,7 +82,7 @@
     <com_atmel_avrdbg_tool_pickit4>
       <ToolOptions>
         <InterfaceProperties>
-          <JtagDbgClock>1000000</JtagDbgClock>
+          <JtagDbgClock>2012192</JtagDbgClock>
         </InterfaceProperties>
         <InterfaceName>JTAG</InterfaceName>
       </ToolOptions>
@@ -90,7 +90,7 @@
       <ToolNumber>BUR222277969</ToolNumber>
       <ToolName>MPLAB® PICkit 4</ToolName>
     </com_atmel_avrdbg_tool_pickit4>
-    <avrtoolinterfaceclock>1000000</avrtoolinterfaceclock>
+    <avrtoolinterfaceclock>2012192</avrtoolinterfaceclock>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <ToolchainSettings>
@@ -195,9 +195,11 @@
             <Value>../Devices/LSM6DSOX</Value>
             <Value>../Devices/BMP390</Value>
             <Value>../Application/Pressure</Value>
+            <Value>../Devices/MCP2515</Value>
+            <Value>../BSP/CAN</Value>
           </ListValues>
         </avrgcc.compiler.directories.IncludePaths>
-        <avrgcc.compiler.optimization.level>Optimize (-O1)</avrgcc.compiler.optimization.level>
+        <avrgcc.compiler.optimization.level>Optimize more (-O2)</avrgcc.compiler.optimization.level>
         <avrgcc.compiler.optimization.OtherFlags>-fdata-sections</avrgcc.compiler.optimization.OtherFlags>
         <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
         <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
@@ -260,12 +262,6 @@
     <Compile Include="Application\LED\ir_led.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="Application\LED\ring_led.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="Application\LED\ring_led.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="Application\LED\status_led.c">
       <SubType>compile</SubType>
     </Compile>
@@ -303,6 +299,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="BSP\ADC\AD.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSP\CAN\CAN_Protocol.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="BSP\CAN\CAN_Protocol.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="BSP\IOU_board.h">
@@ -363,6 +365,18 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="Devices\LSM6DSOX\LSM6DSOX.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Devices\MCP2515\CANSPI.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Devices\MCP2515\CANSPI.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Devices\MCP2515\MCP2515.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Devices\MCP2515\MCP2515.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="Devices\MCP4921\MCP4921.c">
@@ -434,6 +448,7 @@
     <Folder Include="BSP" />
     <Folder Include="Application" />
     <Folder Include="BSP\ADC" />
+    <Folder Include="BSP\CAN" />
     <Folder Include="BSP\PWM" />
     <Folder Include="BSP\TWI" />
     <Folder Include="BSP\SPI" />
@@ -444,6 +459,7 @@
     <Folder Include="Devices\LED_RING" />
     <Folder Include="Devices\LSM6DSOX" />
     <Folder Include="Devices\BMP390" />
+    <Folder Include="Devices\MCP2515" />
     <Folder Include="Devices\onewire" />
     <Folder Include="Devices\TPL5010" />
     <Folder Include="Devices\TEC" />

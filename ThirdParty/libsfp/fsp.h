@@ -105,8 +105,8 @@
 
 // Min. and Max. lengths
 #define FSP_PKT_MIN_LENGTH              7       /**< Minimum packet length in bytes. */
-#define FSP_PKT_MAX_LENGTH              50     /**< Maximum packet length in bytes. */
-#define FSP_PAYLOAD_MAX_LENGTH          43     /**< Maximum packet payload length in bytes. */
+#define FSP_PKT_MAX_LENGTH              67     /**< Maximum packet length in bytes. */
+#define FSP_PAYLOAD_MAX_LENGTH          60     /**< Maximum packet payload length in bytes. */
 
 // CRC16 initial value (or seed byte)
 #define FSP_CRC16_INITIAL_VALUE         0       /**< CRC16 initial value. */
@@ -259,6 +259,7 @@ void fsp_encode(fsp_packet_t *fsp, uint8_t *pkt, uint8_t *pkt_len);
 uint8_t fsp_decode(uint8_t byte, fsp_packet_t *fsp);
 
 void fsp_gen_cmd_w_data_pkt(uint8_t cmd, uint8_t *data, uint8_t data_len, uint8_t dst_adr, uint8_t ack, fsp_packet_t *fsp);
+int frame_decode(uint8_t *buffer, uint8_t length, fsp_packet_t *pkt);
 #endif // FSP_H_
 
 //! \} End of fsp group

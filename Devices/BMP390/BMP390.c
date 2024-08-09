@@ -6,7 +6,6 @@
  */ 
 
 #include "BMP390.h"
-#include "twi.h"
 #include <util/delay.h>
 #include <stdint.h>
 #include <util/twi.h>
@@ -25,32 +24,37 @@
 
 // BMP390 data
 BMP390_Data TempPress_data;
-uint16_t tmp;
+
 // Function to read raw calibration data from BMP390 sensor
 bool BMP390_read_raw_calibration(BMP390_Data *data) {
 	uint8_t calib[21];
-
+	uint16_t result;
 	twi_start();
-
-	// Send device address with write flag
 	twi_write(BMP390_I2C_ADDR << 1);
-
-	// Send register address of calibration data
 	twi_write(BMP390_CALIB_DATA_ADDR);
-
-	// Send repeated start condition
 	twi_start();
-
-	// Send device address with read flag
 	twi_write((BMP390_I2C_ADDR << 1) | 1);
-
 	// Receive calibration data
 	for (uint8_t i = 0; i < 20; i++) {
-		calib[i] = twi_read_ack();
+		result = twi_read_ack();
+		if (result >> 8) 
+		{
+			TempPress_data.TWI_ERR=TWI_ERROR_NO_ACK;
+			TempPress_data.BMP390_ERR=BMP390_ERROR_READ_CALIB;
+			return false;
+		}
+		calib[i] = (uint8_t)result;		
 	}
-	calib[20] = twi_read_nack();
-	if (!calib[20])
-		return false;
+	
+	result = twi_read_nack();
+	if (result >> 8) 
+	{
+		TempPress_data.TWI_ERR=TWI_ERROR_NO_ACK;
+		TempPress_data.BMP390_ERR=BMP390_ERROR_READ_CALIB;
+		return false; 
+	}
+	calib[20] = (uint8_t)result;
+		
 	// Store the raw calibration data into the _BMP390_Raw_Calib_Data_ structure
 	data->NVM.u16_NVM_T1 = ((uint16_t)calib[1] << 8) | (uint16_t)calib[0];
 	data->NVM.u16_NVM_T2 = ((uint16_t)calib[3] << 8) | (uint16_t)calib[2];
@@ -67,8 +71,9 @@ bool BMP390_read_raw_calibration(BMP390_Data *data) {
 	data->NVM.i8_NVM_P10 = calib[19];
 	data->NVM.i8_NVM_P11 = calib[20];
 	
-	// Send stop condition
 	twi_stop();
+	TempPress_data.TWI_ERR = TWI_SUCCESS;
+	TempPress_data.BMP390_ERR=BMP390_SUCCESS;	
 	return true;
 }
 
@@ -81,12 +86,15 @@ void BMP390_convert_calibration(BMP390_Data *data) {
 	data->PAR.f_PAR_P2 = (data->NVM.i16_NVM_P2 - 16384) / 536870912.0;
 	data->PAR.f_PAR_P3 = data->NVM.i8_NVM_P3 / 4294967296.0;
 	data->PAR.f_PAR_P4 = data->NVM.i8_NVM_P4 / 137438953472.0;
-	data->PAR.f_PAR_P5 = data->NVM.u16_NVM_P5 / 0.125;
+	data->PAR.f_PAR_P5 = data->NVM.u16_NVM_P5 * 8.0;
 	data->PAR.f_PAR_P6 = data->NVM.u16_NVM_P6 / 64.0;
 	data->PAR.f_PAR_P7 = data->NVM.i8_NVM_P7 / 256.0;
 	data->PAR.f_PAR_P8 = data->NVM.i8_NVM_P8 / 32768.0;
 	data->PAR.f_PAR_P9 = data->NVM.i16_NVM_P9 / 281474976710656.0;
 	data->PAR.f_PAR_P10 = data->NVM.i8_NVM_P10 / 281474976710656.0;
+	data->PAR.f_PAR_P11 = data->NVM.i8_NVM_P11 / 36893488147419103232.0;
+	
+	data->PAR.f_PAR_P11 = data->NVM.i8_NVM_P11 / 36893488147419103232.0;
 	data->PAR.f_PAR_P11 = data->NVM.i8_NVM_P11 / 36893488147419103232.0;
 }
 
@@ -94,45 +102,35 @@ void BMP390_convert_calibration(BMP390_Data *data) {
 void BMP390_set_mode(BMP390_Mode mode) {
 	uint8_t reg_value;
 	twi_start();
-
-	// Send device address with write flag
 	twi_write(BMP390_I2C_ADDR << 1);
-
-	// Send register address of PWR_CTRL register
 	twi_write(BMP390_REG_PWR_CTRL);
-
-	// Send repeated start condition
 	twi_start();
-
-	// Send device address with read flag
 	twi_write((BMP390_I2C_ADDR << 1) | 1);
-
-	// Receive the current value of PWR_CTRL register
-	reg_value = twi_read_nack();
-
-	// Clear bits 5 and 4 (mode bits)
+	uint16_t result = twi_read_nack();
+	if (result >> 8)
+	{
+		TempPress_data.TWI_ERR=TWI_ERROR_NO_ACK;
+		TempPress_data.BMP390_ERR=BMP390_ERROR_SET_MODE;
+		return false;
+	}
+	reg_value = (uint8_t)result;
 	reg_value &= ~(0x30);
-
-	// Set mode bits according to input mode
 	reg_value |= (mode << 4);
-	
 	reg_value |= (3 << 0);
-	
-	// Send stop condition
-	twi_stop();
-
+	;twi_stop();
 	// Write modified value back to PWR_CTRL register
 	twi_start();
 	twi_write(BMP390_I2C_ADDR << 1);
 	twi_write(BMP390_REG_PWR_CTRL);
 	twi_write(reg_value);
 	twi_stop();
-	return true;
 }
 
 // Function to initialize BMP390 sensor
-bool BMP390_init(void) 
+bool BMP390_init(void)
 {
+	TempPress_data.TWI_ERR      =TWI_SUCCESS;
+	TempPress_data.BMP390_ERR   =BMP390_SUCCESS;
 	BMP390_set_mode(BMP390_MODE_NORMAL);
 	bool err = BMP390_read_raw_calibration(&TempPress_data);
 	BMP390_convert_calibration(&TempPress_data);
@@ -142,36 +140,45 @@ bool BMP390_init(void)
 // Function to read temperature and pressure data from BMP390 sensor
 void BMP390_read_raw_temp_press(BMP390_Data *data) {
 	uint8_t temp_press_data[6];
-
+	uint16_t result;
 	twi_start();
-
 	// Send device address with write flag
 	twi_write(BMP390_I2C_ADDR << 1);
-
 	// Send register address of temperature and pressure data
 	twi_write(BMP390_TEMP_PRESS_DATA_ADDR);
-
 	// Send repeated start condition
 	twi_start();
-
 	// Send device address with read flag
 	twi_write((BMP390_I2C_ADDR << 1) | 1);
-
 	// Receive temperature and pressure data
 	for (uint8_t i = 0; i < 5; i++) {
-		temp_press_data[i] = twi_read_ack();
+		result = twi_read_ack();
+		if (result >> 8) 
+		{
+			TempPress_data.BMP390_ERR=BMP390_ERROR_READ_TEMPRESS;
+			return;
+		}
+		temp_press_data[i] = (uint8_t)result;
 	}
-	temp_press_data[5] = twi_read_nack();
+	
+	result = twi_read_nack();
+	if (result >> 8) 
+	{
+		TempPress_data.BMP390_ERR=BMP390_ERROR_READ_TEMPRESS;
+		return;
+	}
+	temp_press_data[5] = (uint8_t)result;
 
 	// Combine the bytes to form the temperature and pressure readings
 	int32_t temp_raw = ((uint32_t)temp_press_data[5] << 16) | ((uint32_t)temp_press_data[4] << 8) | (uint32_t)temp_press_data[3];
 	int32_t press_raw = ((uint32_t)temp_press_data[2] << 16) | ((uint32_t)temp_press_data[1] << 8) | (uint32_t)temp_press_data[0];
-
 	// Store the raw readings into the BMP390_Data structure
 	data->temperature_raw = temp_raw;
 	data->pressure_raw = press_raw;
 	// Send stop condition
 	twi_stop();
+	TempPress_data.TWI_ERR=TWI_SUCCESS;
+	TempPress_data.BMP390_ERR=BMP390_SUCCESS;
 }
 
 
@@ -184,18 +191,16 @@ void BMP390_compensate_temperature(BMP390_Data *data) {
 	partial_data2 = (float)(partial_data1*data->PAR.f_PAR_T2);
 	
 	data->temperature = partial_data2+(partial_data1*partial_data1)*data->PAR.f_PAR_T3;
-	//Pressure 10 times
-	data->temperature *=10;
 }
-
-// Function to compensate pressure reading
-void BMP390_compensate_pressure(BMP390_Data *data) {
 	float partial_data1;
 	float partial_data2;
 	float partial_data3;
 	float partial_data4;
 	float partial_out1;
 	float partial_out2;
+// Function to compensate pressure reading
+void BMP390_compensate_pressure(BMP390_Data *data) {
+
 	
 	partial_data1=data->PAR.f_PAR_P6*(data->temperature);
 	partial_data2=data->PAR.f_PAR_P7*(data->temperature*data->temperature);
@@ -208,18 +213,14 @@ void BMP390_compensate_pressure(BMP390_Data *data) {
 	partial_out2=(float)data->pressure_raw*(data->PAR.f_PAR_P1 + partial_data1 + partial_data2 + partial_data3);
 	
 	partial_data1=(float)data->pressure_raw*(float)data->pressure_raw;
-	partial_data2=data->PAR.f_PAR_P9*data->PAR.f_PAR_P10*data->temperature;
+	partial_data2=data->PAR.f_PAR_P9 + data->PAR.f_PAR_P10*data->temperature;
 	partial_data3=partial_data1*partial_data2;
-	partial_data4=partial_data3 + ((float)data->pressure_raw*(float)data->pressure_raw*(float)data->pressure_raw)*data->PAR.f_PAR_P11;
+	partial_data4=((float)data->pressure_raw*(float)data->pressure_raw*(float)data->pressure_raw)*data->PAR.f_PAR_P11;
 	
-	//partial_out2=(float)data->pressure_raw*(data->PAR.f_PAR_P1 + partial_data1 + partial_data2 + partial_data3);
-
-	data->pressure = partial_out1 + partial_out2 + partial_data4;
-	//Pressure in 10 times hPa, value is 10.000 mean 1.000 hPa (hPa = Pa/100, 10xhPa = Pa/10)
-	data->pressure /=10.0;
+	data->pressure = partial_out1 + partial_out2 + partial_data3 + partial_data4;
 }
 
-void BMP390_temp_press_update(void)
+void BMP390_temp_press_update()
 {
 	BMP390_init();
 	BMP390_read_raw_temp_press(&TempPress_data);
@@ -229,9 +230,11 @@ void BMP390_temp_press_update(void)
 
 int16_t	get_BMP390_temperature(void)
 {
-	return (int16_t)TempPress_data.temperature;
+	if (TempPress_data.BMP390_ERR) return 0x7FFF;
+	return (int16_t)TempPress_data.temperature*10;
 }
-uint16_t get_BMP390_pressure(void)
+int16_t	get_BMP390_pressure(void)
 {
-	return (uint16_t)TempPress_data.pressure;
+	if (TempPress_data.BMP390_ERR) return 0x7FFF;
+	else return (int16_t)(TempPress_data.pressure/10.0);
 }

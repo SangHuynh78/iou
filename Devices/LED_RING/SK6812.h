@@ -21,7 +21,6 @@ typedef struct rgbw_color
 rgbw_color colorMap[LED_COUNT];
 
 void ringled_show(const rgbw_color *colors, uint8_t pixels);
-void ringled_clear(void);
 void ringled_init(void);
 void ringled_set_RGBW(uint8_t red, uint8_t green, uint8_t blue, uint8_t white);
 rgbw_color ringled_get_RGBW(void);

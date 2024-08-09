@@ -136,9 +136,13 @@ const int16_t NTC_table[1024] PROGMEM = {
 	3521, 4140
 };
 
-int16_t get_NTC_temperature_using_table(uint8_t channel){
+int16_t get_NTC_temperature_using_table(uint8_t channel)
+{
+	int16_t  temp;
 	uint16_t ADCVal  = adc_read(channel);
-	return pgm_read_word(&NTC_table[ADCVal]);
+	temp = pgm_read_word(&NTC_table[ADCVal]);
+	if (temp < -500 || temp >  2000)  temp = 0x7FFF;
+	return temp;
 };
 
 int16_t get_NTC_temperature(uint8_t channel)

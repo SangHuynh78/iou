@@ -9,7 +9,7 @@
 #ifndef LSM6DSOX_H_
 #define LSM6DSOX_H_
 
-#include <stdio.h>
+#include "stdio.h"
 #include <stdbool.h>
 
 #define LSM6DSOX_ADDRESS            0x6A
@@ -25,21 +25,24 @@
 #define LSM6DSOX_CTRL8_XL           0X17
 
 #define LSM6DSOX_OUTX_L_G           0X22
-#define LSM6DSOX_OUTX_H_G           0X23
-#define LSM6DSOX_OUTY_L_G           0X24
-#define LSM6DSOX_OUTY_H_G           0X25
-#define LSM6DSOX_OUTZ_L_G           0X26
-#define LSM6DSOX_OUTZ_H_G           0X27
+// #define LSM6DSOX_OUTX_H_G           0X23
+// #define LSM6DSOX_OUTY_L_G           0X24
+// #define LSM6DSOX_OUTY_H_G           0X25
+// #define LSM6DSOX_OUTZ_L_G           0X26
+// #define LSM6DSOX_OUTZ_H_G           0X27
 
-#define LSM6DSOX_OUTX_L_A			0X28
-#define LSM6DSOX_OUTX_H_A			0X29
-#define LSM6DSOX_OUTY_L_A			0X2A
-#define LSM6DSOX_OUTY_H_A			0X2B
-#define LSM6DSOX_OUTZ_L_A			0X2C
-#define LSM6DSOX_OUTZ_H_A			0X2D
+// #define LSM6DSOX_OUTX_L_A			0X28
+// #define LSM6DSOX_OUTX_H_A			0X29
+// #define LSM6DSOX_OUTY_L_A			0X2A
+// #define LSM6DSOX_OUTY_H_A			0X2B
+// #define LSM6DSOX_OUTZ_L_A			0X2C
+// #define LSM6DSOX_OUTZ_H_A			0X2D
 
 #define GYRO_SENSITIVITY_250DPS		8.75f
 #define LSM6DSOX_ACCL_FS_2G			0.061f
+
+#define GYRO_SENSITIVITY_500DPS		17.50f
+#define LSM6DSOX_ACCL_FS_8G			0.244f
 
 typedef struct _Accel_Gyro_DataTypedef_
 {
@@ -48,10 +51,12 @@ typedef struct _Accel_Gyro_DataTypedef_
 	int16_t z;
 } Accel_Gyro_DataTypedef;
 
-bool lsm6dsox_write_register(uint8_t _reg, uint8_t _value);
-uint8_t lsm6dsox_read_register(uint8_t _reg);
+void lsm6dsox_write(uint8_t _reg, uint8_t _value);
+//uint8_t lsm6dsox_read_register(uint8_t _reg);
+void lsm6dsox_read(uint8_t reg, uint8_t *buffer, uint8_t length);
 bool lsm6dsox_init(void);
-void read_accel(Accel_Gyro_DataTypedef* _accel);
-void read_gyro(Accel_Gyro_DataTypedef* _gyro);
+// bool read_accel(Accel_Gyro_DataTypedef* _accel);
+// bool read_gyro(Accel_Gyro_DataTypedef* _gyro);
+void read_accel_gyro(Accel_Gyro_DataTypedef* _accel, Accel_Gyro_DataTypedef* _gyro);
 
 #endif /* LSM6DSOX_H_ */

@@ -2,8 +2,9 @@
 //
 // SPI master routines were pulled from the Atmel ATMega168 datasheet.
 
-#include <avr/io.h>
 
+
+#include <avr/io.h>
 #include "IOU_board.h"
 #include "spi.h"
 
@@ -57,3 +58,54 @@ uint8_t SPI_ReadByte( void )
 	return SPDR;
 }
 
+void SPI_RxBuffer(uint8_t *buffer, uint8_t length)
+{
+	uint8_t i;
+	uint32_t timeout_counter;
+
+	for (i = 0; i < length; i++) {
+		// Send dummy data to initiate SPI clock
+		SPDR = 0xFF;
+		
+		// Wait for reception complete with timeout
+		timeout_counter = 0;
+		while (!(SPSR & (1<<SPIF))) {
+			_delay_us(1);
+			timeout_counter++;
+			if (timeout_counter > 10000) {
+				// Handle timeout (e.g., set an error flag, break, etc.)
+				// For now, we'll just break
+				break;
+			}
+		}
+		
+		// Read received data
+		buffer[i] = SPDR;
+	}
+}
+
+void SPI_TxBuffer(uint8_t *buffer, uint8_t length)
+{
+	uint8_t i;
+	uint32_t timeout_counter;
+
+	for (i = 0; i < length; i++)
+	{
+		// Load data into the buffer
+		SPDR = buffer[i];
+
+		// Wait for transmission complete with timeout
+		timeout_counter = 0;
+		while (!(SPSR & (1<<SPIF)))
+		{
+			_delay_us(1);
+			timeout_counter++;
+			if (timeout_counter > 10000)
+			{
+				// Handle timeout (e.g., set an error flag, break, etc.)
+				// For now, we'll just break
+				break;
+			}
+		}
+	}
+}

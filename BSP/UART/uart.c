@@ -49,14 +49,15 @@ uint8_t rbuffer_count(volatile ringbuffer_t* rb) {
 }
 
 bool rbuffer_full(volatile ringbuffer_t* rb) {
-    return (rb->count == (uint8_t)RBUFFER_SIZE);
+    return (rb->count == (uint8_t)RBUFFER_SIZE - 1);
 }
 
 bool rbuffer_empty(volatile ringbuffer_t* rb) {
-    return (rb->count == 0);
+    return ((rb->count == 0) && (rb->in == rb->out));
 }
 
-void rbuffer_insert(char data, volatile ringbuffer_t* rb) {   
+void rbuffer_insert(char data, volatile ringbuffer_t* rb) {
+	if (rbuffer_full(rb)) rbuffer_reset(rb);
     *(rb->buffer + rb->in) = data;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         rb->in = (rb->in + 1) & ((uint8_t)RBUFFER_SIZE - 1);
@@ -73,6 +74,12 @@ char rbuffer_remove(volatile ringbuffer_t* rb) {
     return data;
 }
 
+void rbuffer_reset(volatile ringbuffer_t* rb)
+{
+	rb->in = 0;
+	rb->out = 0;
+	rb->count = 0;
+}
 // ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 
 
@@ -82,23 +89,18 @@ char rbuffer_remove(volatile ringbuffer_t* rb) {
 #ifdef USART0_ENABLE
 
 void usart0_init(void) {
-    rbuffer_init(&p_UART0_meta->rb_tx);                             // Init Rx buffer
-    rbuffer_init(&p_UART0_meta->rb_rx);                             // Init Tx buffer
-	UBRR0H=0;
-	UBRR0L=51;
-	UCSR0B |= (1<<RXEN)|(1<<TXEN)|(1<<RXCIE);					//enable TX, RX, RX interrupt
-	UCSR0C |= (1<<UCSZ1) | (1<<UCSZ0);
-	sei();
+	rbuffer_init(&p_UART0_meta->rb_tx);                             // Init Tx buffer
+	rbuffer_init(&p_UART0_meta->rb_rx);                             // Init Rx buffer
+	UBRR0H = (uint8_t)(25 >> 8);
+	UBRR0L = (uint8_t)25;
+	UCSR0A |= (1 << U2X0);                                           // Double the USART Transmission Speed
+	UCSR0B |= (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0);          // Enable TX, RX, RX interrupt
+	UCSR0C |= (1 << UCSZ01) | (1 << UCSZ00);                        // Set frame format: 8 data bits, 1 stop bit
+	sei();                                                           // Enable global interrupts
 }
 
+
 void usart0_send_char( char c) {
-//	if ((UCSR0B & (1 << TXC)) != (1 << TXC))
-//	{
-//		UDR0 = c;
-//		 UCSR0B |= 1 << TXC; 
-//		 return;
-//	}
-	
     while(rbuffer_full(&p_UART0_meta->rb_tx));
     rbuffer_insert(c, &p_UART0_meta->rb_tx);
     UCSR0B |= 1 << UDRE;                   // Enable Tx buffer empty interrupt 
@@ -149,7 +151,7 @@ void usart0_close() {
 
 volatile ringbuffer_t * uart_get_uart0_rx_buffer_address(void)
 {
-	return &(p_UART0_meta->rb_rx);
+	return /*(ringbuffer_t *)*/&p_UART0_meta->rb_rx;
 }
 #endif
 
@@ -160,11 +162,13 @@ void usart1_init(void) {
 	rbuffer_init(&p_UART1_meta->rb_tx);                             // Init Rx buffer
 	rbuffer_init(&p_UART1_meta->rb_rx);                             // Init Tx buffer
 	UBRR1H=0;
-	UBRR1L=25;
+	UBRR1L=3;
 	UCSR1B |= (1<<RXEN)|(1<<TXEN)|(1<<RXCIE);					//enable TX, RX, RX interrupt
 	UCSR1C |= (1<<UCSZ1) | (1<<UCSZ0);
-	UCSR1A |= (1<<U2X1);
+//	UCSR1A |= (1<<U2X1);
+	sei();
 }
+
 
 void usart1_send_char( char c) {
 	
@@ -218,22 +222,21 @@ void usart1_close() {
 
 volatile ringbuffer_t * uart_get_uart1_rx_buffer_address(void)
 {
-	return &(p_UART1_meta->rb_rx);
+	return (ringbuffer_t *)&p_UART1_meta->rb_rx;
 }
 #endif
 
 // ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 // ISR FUNCTIONS
+// ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 #ifdef USART0_ENABLE
-
-ISR(USART0_RX_vect) {
-	
-   char	data = UDR0;
-
-    if(!rbuffer_full(&p_UART0_meta->rb_rx)) {
+ISR(USART0_RX_vect) 
+{	
+	char	data = UDR0;
+    if(!rbuffer_full(&p_UART0_meta->rb_rx))
+	{
 	    rbuffer_insert(data, &p_UART0_meta->rb_rx);
 	    p_UART0_meta->usart_error = UCSR0A & USART_RX_ERROR_MASK ;
-
     }
     else {
 	    p_UART0_meta->usart_error = ((UCSR0A & USART_RX_ERROR_MASK) | USART_BUFFER_OVERFLOW>>8);
@@ -429,13 +432,13 @@ again:
                 //
                 // Handle the %d and %i commands.
                 //
-                case 'd':
                 case 'i':
+                case 'd':
                 {
                     //
                     // Get the value from the varargs.
                     //
-                    ui32Value = va_arg(vaArgP, uint16_t);
+                    ui32Value = va_arg(vaArgP, int16_t);
 
                     //
                     // Reset the buffer position.

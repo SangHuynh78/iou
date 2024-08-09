@@ -18,11 +18,11 @@
 #include "TEC.h"
 #include "command.h"
 #include "watchdog.h"
-#include "ring_led.h"
+#include <util/delay.h>
 #include "Accel_Gyro.h"
 #include "Pressure.h"
 #include "ir_led.h"
-#include "TPL5010.h"
+#include "CAN_Protocol.h"
 
 int main(void)
 {
@@ -34,22 +34,22 @@ int main(void)
 	temperature_init();
 	ringled_init();
 	IR_led_init();
- 	COPC_init();
-//	TPL5010_done_pulse;
+	COPC_init();
 	
-	SCH_StartSchedular();
 	status_led_create_task();
 	command_create_task();
 	temperature_create_task();
-	ringled_create_task();
 	COPC_create_task();
-	if (Accel_and_Gyro_init())
-		Accel_and_Gyro_create_task();
-	if (Pressure_init())
-		Pressure_create_task();
+	SCH_StartSchedular();
+	Accel_and_Gyro_init();
+	Accel_and_Gyro_create_task();
+	Pressure_init();
+	Pressure_create_task();
+	CAN_Protocol_Init();
+	CAN_create_task();
+		
 	while (1)
 	{
-		SCH_HandleScheduledTask();
+	SCH_HandleScheduledTask();
 	}
 }
-

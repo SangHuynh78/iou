@@ -26,14 +26,17 @@ Application/CMDLine/command.d Application/CMDLine/command.o: \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\math.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay_basic.h \
+ ../BSP/TWI/twi.h \
+ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdlib.h \
+ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\interrupt.h \
+ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\compat\twi.h \
  ../Devices/MCP4921/MCP4921.h ../BSP/SPI/spi.h ../Devices/TEC/TEC.h \
  ../Data_struct/IOU_data.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\time.h \
- c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdlib.h \
- ../Application/LED/ring_led.h ../Devices/LED_RING/SK6812.h \
  ../Application/LED/ir_led.h ../Application/Accel_Gyro/Accel_Gyro.h \
  ../Devices/LSM6DSOX/LSM6DSOX.h ../Application/Pressure/Pressure.h \
- ../BSP/ADC/AD.h \
+ ../BSP/ADC/AD.h ../BSP/CAN/CAN_Protocol.h ../Devices/MCP2515/CANSPI.h \
+ ../Devices/MCP2515/MCP2515.h ../Devices/LED_RING/SK6812.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\pgmspace.h
 
 ../Scheduler/scheduler.h:
@@ -96,6 +99,14 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\util\delay_basic.h:
 
+../BSP/TWI/twi.h:
+
+c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdlib.h:
+
+c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\interrupt.h:
+
+c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\compat\twi.h:
+
 ../Devices/MCP4921/MCP4921.h:
 
 ../BSP/SPI/spi.h:
@@ -106,12 +117,6 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\time.h:
 
-c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdlib.h:
-
-../Application/LED/ring_led.h:
-
-../Devices/LED_RING/SK6812.h:
-
 ../Application/LED/ir_led.h:
 
 ../Application/Accel_Gyro/Accel_Gyro.h:
@@ -121,5 +126,13 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\
 ../Application/Pressure/Pressure.h:
 
 ../BSP/ADC/AD.h:
+
+../BSP/CAN/CAN_Protocol.h:
+
+../Devices/MCP2515/CANSPI.h:
+
+../Devices/MCP2515/MCP2515.h:
+
+../Devices/LED_RING/SK6812.h:
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\pgmspace.h:

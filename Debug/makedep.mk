@@ -12,8 +12,6 @@ Application\COPC\COPC.c
 
 Application\LED\ir_led.c
 
-Application\LED\ring_led.c
-
 Application\LED\status_led.c
 
 Application\main.c
@@ -27,6 +25,8 @@ Application\Temperature\temperature.c
 Application\WATCHDOG\watchdog.c
 
 BSP\ADC\AD.c
+
+BSP\CAN\CAN_Protocol.c
 
 BSP\PWM\PWM.c
 
@@ -45,6 +45,10 @@ Data_struct\IOU_data.c
 Devices\BMP390\BMP390.c
 
 Devices\LSM6DSOX\LSM6DSOX.c
+
+Devices\MCP2515\CANSPI.c
+
+Devices\MCP2515\MCP2515.c
 
 Devices\MCP4921\MCP4921.c
 

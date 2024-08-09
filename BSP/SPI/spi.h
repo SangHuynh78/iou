@@ -6,6 +6,7 @@
 #define _SPI_H
 
 #include <inttypes.h>
+#include <util/delay.h>
 
 // SPI Definitions
 
@@ -32,6 +33,7 @@ uint8_t SPI_SendByte( uint8_t data );
 // Read a byte of data
 uint8_t SPI_ReadByte( void );
 
-
+void SPI_RxBuffer(uint8_t *buffer, uint8_t length);
+void SPI_TxBuffer(uint8_t *buffer, uint8_t length);
 
 #endif // _SPI_CLARKDAWG

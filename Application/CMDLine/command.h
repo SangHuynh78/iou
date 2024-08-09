@@ -14,7 +14,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define	COMMAND_MAX_LENGTH	64
+#define	COMMAND_MAX_LENGTH	30
 
 void	command_init(void);
 void	command_send_splash(void);
@@ -50,9 +50,9 @@ Cmd_TEC_log_enable(int argc, char *argv[]);
 int
 Cmd_TEC_log_disable(int argc, char *argv[]);
 int
-Cmd_ringled_set_RGBW(int argc, char *argv[]);
+Cmd_ringled_set_rgbw(int argc, char *argv[]);
 int
-Cmd_ringled_get_RGBW(int argc, char *argv[]);
+Cmd_ringled_get_rgbw(int argc, char *argv[]);
 int
 Cmd_IRled_set_bright(int argc, char *argv[]);
 int
@@ -62,7 +62,11 @@ Cmd_get_acceleration_gyroscope(int argc, char *argv[]);
 int
 Cmd_get_pressure(int argc, char *argv[]);
 int
-Cmd_get_parameters(int argc, char *argv[]);
+Cmd_get_all(int argc, char *argv[]);
 
+// int
+// Cmd_can_transmit(int argc, char *argv[]);
+// int
+// Cmd_can_status(int argc, char *argv[]);
 
 #endif /* COMMAND_H_ */

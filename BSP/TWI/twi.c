@@ -45,6 +45,9 @@
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= (1<<bit))
 #endif
 
+//#include "pins_arduino.h"
+#include "twi.h"
+
 static volatile uint8_t twi_state;
 static volatile uint8_t twi_slarw;
 //static volatile uint8_t twi_slarr;
@@ -87,95 +90,103 @@ uint8_t* twi_get_master_rx_Buffer() {return twi_master_rxBuffer;}
 uint8_t* twi_get_slv_tx_Buffer() {return twi_slv_txBuffer;}
 uint8_t* twi_get_slv_rx_Buffer() {return twi_slv_rxBuffer;}
 
-int twi_check_master_txBuffer ()
+int twi_check_master_txBuffer (void)
 {
 	for (int i = 0; i<TWI_BUFFER_LENGTH; i++ )
 	{
 		if (twi_master_txBuffer[i] != 0x00)
-			return 1;		
+		{ return 1;} 		
 	}
 	return 0;
 }
-uint8_t twi_check_master_rxBuffer ()
+uint8_t twi_check_master_rxBuffer (void)
 {
 	for (int i = 0; i<TWI_BUFFER_LENGTH; i++ )
 	{
 		if (twi_master_rxBuffer[i] != 0x00)
-			return 1;	
+		{ return 1;}	
 	}
 	return 0;
 }
-uint8_t twi_check_slv_txBuffer ()
+uint8_t twi_check_slv_txBuffer (void)
 {
 	for (int i = 0; i<TWI_BUFFER_LENGTH; i++ )
 	{
 		if (twi_slv_txBuffer[i] != 0x00)
-			return 1;
+		{ return 1;} 	
 	}
 	return 0;
 }
-uint8_t twi_check_slv_rxBuffer ()
+uint8_t twi_check_slv_rxBuffer (void)
 {
 	for (int i = 0; i<TWI_BUFFER_LENGTH; i++ )
 	{
 		if (twi_slv_rxBuffer[i] != 0x00)
-			return 1;	
+			return 1;		
 	}
 	return 0;
 }
 
-void twi_start(void) {
+//void twi_init(void) {
+	//TWSR = 0x00;
+	//TWBR = ((F_CPU / SCL_CLOCK) - 16) / 2;
+	//TWCR = (1 << TWEN);
+//}
+
+uint8_t twi_start(void) {
 	TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN);
 	uint8_t timeout = 250;			//250*(625ns) = 0.15ms
 	while (!(TWCR & (1 << TWINT)))
 	{
 		if(-- timeout == 0)
-			return;
+			return 1;
 	}
+	return 0;
 }
 
-void twi_stop(void) {
+uint8_t twi_stop(void) {
 	TWCR = (1 << TWINT) | (1 << TWSTO) | (1 << TWEN);
 	uint8_t timeout = 250;
- 	while (TWCR & (1 << TWSTO))
+	while (TWCR & (1 << TWSTO))
 	{
 		if(-- timeout == 0)
-		return;
+			return 1;
 	}
+	return 0;
 }
 
-void twi_write(uint8_t data) {
+uint8_t twi_write(uint8_t data) {
 	TWDR = data;
 	TWCR = (1 << TWINT) | (1 << TWEN);
 	uint8_t timeout = 250;
 	while (!(TWCR & (1 << TWINT)))
 	{
 		if(-- timeout == 0)
-		return;
+			return 1;
 	}
-	
+	return 0;	
 }
 
-uint8_t twi_read_ack(void) {
+uint16_t twi_read_ack(void) {
 	TWCR = (1 << TWINT) | (1 << TWEA) | (1 << TWEN);
 	uint8_t timeout = 250;
 	while (!(TWCR & (1 << TWINT)))
 	{
 		if(-- timeout == 0)
-			return 0;
+			return 0x0100;
 	}
-	return TWDR;
+	return (uint16_t)TWDR;
 }
 
-uint8_t twi_read_nack(void) {
+uint16_t twi_read_nack(void) {
 	TWCR = (1 << TWINT) | (1 << TWEN);
 	uint8_t timeout = 250;
 	while (!(TWCR & (1 << TWINT)))
 	{
 		if(-- timeout == 0)
-			return 0;
+			return 0x0100;
 	}
-	return TWDR;
+	return (uint16_t)TWDR;
 }
 
 /* 

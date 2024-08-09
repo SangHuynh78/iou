@@ -18,7 +18,7 @@
 #include "IOU_board.h"
 // ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 // DEFINE RING BUFFER SIZE; MUST BE 2, 4, 8, 16, 32, 64 or 128
-#define RBUFFER_SIZE 64
+#define RBUFFER_SIZE 128
 
 // ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 
@@ -59,6 +59,7 @@ bool rbuffer_full(volatile ringbuffer_t* rb);
 bool rbuffer_empty(volatile ringbuffer_t* rb);
 void rbuffer_insert(char data, volatile ringbuffer_t* rb);
 char rbuffer_remove(volatile ringbuffer_t* rb);
+void rbuffer_reset(volatile ringbuffer_t* rb);
 
 // ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 // USART FUNCTIONS

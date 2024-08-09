@@ -15,8 +15,7 @@ rgbw_color status_rgbw_color;
 
 void ringled_init(void)
 {
-	ringled_clear();
-	ringled_show(colorMap, LED_COUNT);
+	ringled_set_RGBW(0, 0, 0, 0);
 }
 
 void __attribute__((noinline)) ringled_show(const rgbw_color *colors, uint8_t pixels)
@@ -75,13 +74,6 @@ void __attribute__((noinline)) ringled_show(const rgbw_color *colors, uint8_t pi
 		);
 	}
 	sei();          // Re-enable interrupts now that we are done.
-}
-
-
-void ringled_clear(void)
-{
-	for (uint8_t i = 0; i < LED_COUNT; i++)
-	colorMap[i] = (rgbw_color){0, 0, 0, 0};
 }
 
 void ringled_set_RGBW(uint8_t red, uint8_t green, uint8_t blue, uint8_t white)

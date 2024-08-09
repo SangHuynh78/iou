@@ -10,7 +10,7 @@
 #include "IOU_board.h"
 #include "temperature.h"
 #include "Accel_Gyro.h"
-#include "ring_led.h"
+#include "SK6812.h"
 #include "ir_led.h"
 #include "Pressure.h"
 #include "crc.h"
@@ -20,7 +20,7 @@
 static	void COPC_task_update(void);
 void COPC_process_command(fsp_packet_t	*s_COPC_FspPacket);
 void OK_Send(void);
-	//Function send to COPC data OK
+//Function send to COPC data OK
 void copc_iou_set_temp(void);
 void copc_iou_tec_ena(void);
 void copc_iou_tec_dis(void);
@@ -28,14 +28,14 @@ void copc_iou_tec_ena_auto(void);
 void copc_iou_tec_dis_auto(void);
 void copc_iou_tec_set_output(void);
 void copc_iou_tec_set_auto_vol(void);
-void copc_iou_tec_status(void);
 void copc_iou_tec_log_ena(void);
 void copc_iou_tec_log_dis(void);
 void copc_iou_ringled_set_RGBW(void);
 void copc_iou_irled_set_bright(void);
-	//Function send to COPC data in struct payload
+//Function send to COPC data in struct payload
 void copc_iou_get_temp(void);
 void copc_iou_get_temp_setpoint(void);
+void copc_iou_tec_status(void);
 void copc_iou_ringled_get_RGBW(void);
 void copc_iou_irled_get_bright(void);
 void copc_iou_get_accel_gyro(void);
@@ -51,6 +51,10 @@ static	fsp_packet_t	s_IOU_FspPacket;
 static	COPC_Sfp_Payload_t	*s_pCOPC_Sfp_Payload;
 static	IOU_Sfp_Payload_t	*s_pIOU_Sfp_Payload;
 volatile uint8_t swap_byte = 0;
+
+volatile uint8_t COPC_RX_Buff[COPC_CMD_MAX_LEN];
+volatile uint8_t receiving = 0;
+volatile uint8_t COPC_RX_Index = 0;
 
 /* Private typedef -----------------------------------------------------------*/
 typedef struct COPC_TaskContextTypedef
@@ -92,35 +96,58 @@ static void COPC_task_update(void)
 	while (!rbuffer_empty(p_COPCBuffer))
 	{
 		rxData = rbuffer_remove(p_COPCBuffer);
-		if(rxData == FSP_PKT_ESC)	
+		if (!receiving)
 		{
-			swap_byte = 1;
-			break;
-		}
-		if(swap_byte)
+			if(rxData  == (char)(FSP_PKT_SOD))
+			{
+				receiving  =  1;
+				COPC_RX_Index =  0;
+			}
+		} else
 		{
-			swap_byte = 0;
-			if(rxData == FSP_PKT_TSOD)	rxData = FSP_PKT_SOD;
-			if(rxData == FSP_PKT_TESC)	rxData = FSP_PKT_ESC;
-			if(rxData == FSP_PKT_TEOF)	rxData = FSP_PKT_EOF;
-		}
-		switch ( fsp_decode(rxData,&s_COPC_FspPacket))
-		{
-			//process command
-            case FSP_PKT_NOT_READY:
-				break;
-            case FSP_PKT_READY:
-				COPC_process_command(&s_COPC_FspPacket);          
-	            break;
-            case FSP_PKT_INVALID:
-	            break;
-            case FSP_PKT_WRONG_ADR:
-				usart0_send_string("Wrong module address \r\n");
-	            break;
-            case FSP_PKT_ERROR:
-	            break;
-            default:
-	           break;
+			if(rxData  == (char)(FSP_PKT_EOF))
+			{
+				receiving  =  0;
+				switch (frame_decode((uint8_t  *)COPC_RX_Buff, COPC_RX_Index,  &s_COPC_FspPacket))
+				{
+					//process command
+					case FSP_PKT_NOT_READY:
+					break;
+					case FSP_PKT_READY:
+						usart0_send_string("Received COPC cmd\r\n");
+						COPC_process_command(&s_COPC_FspPacket);
+					break;
+					case FSP_PKT_INVALID:
+					
+					break;
+					case FSP_PKT_WRONG_ADR:
+						usart0_send_string("Wrong module adr \r\n");
+						usart0_send_array((const char *)COPC_RX_Buff,COPC_RX_Index);
+					break;
+					case FSP_PKT_ERROR:
+						usart0_send_string("Packet error \r\n");
+						usart0_send_array((const char *)COPC_RX_Buff,COPC_RX_Index);
+					break;
+					default:
+					
+					break;
+				}
+				} else {
+				if(rxData == (char)(FSP_PKT_ESC)){
+					swap_byte = 1;
+					break;
+				}
+				if(swap_byte) {
+					swap_byte = 0;
+					if(rxData == (char)(FSP_PKT_TSOD))	rxData = FSP_PKT_SOD;
+					if(rxData == (char)(FSP_PKT_TESC))	rxData = FSP_PKT_ESC;
+					if(rxData == (char)(FSP_PKT_TEOF))	rxData = FSP_PKT_EOF;
+				}
+				COPC_RX_Buff[COPC_RX_Index++]  =  rxData;
+			}
+			if  (COPC_RX_Index >= FSP_PKT_MAX_LENGTH)  {
+				receiving  =  0;
+			}
 		}
 	}
 }
@@ -158,6 +185,7 @@ void COPC_process_command(fsp_packet_t	*s_COPC_FspPacket)
 			copc_iou_tec_set_auto_vol();
 			break;
 		case FSP_CMD_CODE_IOU_TEC_STATUS:
+			copc_iou_tec_status();
 			break;
 		case FSP_CMD_CODE_IOU_TEC_LOG_ENA:
 			break;
@@ -197,7 +225,7 @@ void OK_Send() {
 	payload[0] = s_pCOPC_Sfp_Payload->commonFrame.Cmd;
 	fsp_gen_cmd_w_data_pkt(FSP_CMD_RESPONSE_DONE, payload, 1, FSP_ADR_COPC, FSP_PKT_WITHOUT_ACK,  &s_IOU_FspPacket);
 	fsp_encode(&s_IOU_FspPacket,  payload,  &frame_len);
-	usart1_send_array(payload,frame_len);
+	usart1_send_array((char*)payload,frame_len);
 }
 
 //Function send to COPC data OK
@@ -206,7 +234,7 @@ void copc_iou_set_temp(void)
 	uint8_t channel = s_pCOPC_Sfp_Payload->setTempCommandFrame.channel;
 	if (channel > (MAX_CHANNEL-1))
 		return;
-	uint16_t setpoint = ((s_pCOPC_Sfp_Payload->setTempCommandFrame.setpoint_High) << 8) | (s_pCOPC_Sfp_Payload->setTempCommandFrame.setpoint_Low);
+	int16_t setpoint = ((s_pCOPC_Sfp_Payload->setTempCommandFrame.setpoint_High) << 8) | (s_pCOPC_Sfp_Payload->setTempCommandFrame.setpoint_Low);
 	temperature_set_point(setpoint, channel);
 	OK_Send();
 }
@@ -231,9 +259,7 @@ void copc_iou_tec_ena_auto(void)
 	uint8_t channel = s_pCOPC_Sfp_Payload->tecEnaAutoCommandFrame.channel;
 	if (channel > (MAX_CHANNEL-1))
 		return;
-	temperature_enable_auto_control_TEC(channel << 1);
-	temperature_disable_TEC(channel*2);
-	temperature_disable_TEC(channel*2 + 1);
+	temperature_enable_auto_control_TEC(channel);
 	OK_Send();
 }
 void copc_iou_tec_dis_auto(void)
@@ -241,7 +267,7 @@ void copc_iou_tec_dis_auto(void)
 	uint8_t channel = s_pCOPC_Sfp_Payload->tecEnaAutoCommandFrame.channel;
 	if (channel > (MAX_CHANNEL-1))
 		return;
-	temperature_disable_auto_control_TEC(channel << 1);
+	temperature_disable_auto_control_TEC(channel);
 	OK_Send();
 }
 void copc_iou_tec_set_output(void)
@@ -264,10 +290,6 @@ void copc_iou_tec_set_auto_vol(void)
 	OK_Send();
 }
 
-void copc_iou_tec_status(void)
-{
-	return;
-}
 void copc_iou_tec_log_ena(void)
 {
 	return;
@@ -318,9 +340,9 @@ void copc_iou_get_temp(void)
 			temp = (uint16_t)temperature_get_bmp390();
 		s_pIOU_Sfp_Payload->iouGetTempResponseFrame.temperature_high = (uint8_t)(temp >> 8);
 		s_pIOU_Sfp_Payload->iouGetTempResponseFrame.temperature_low = (uint8_t)(temp);
-		fsp_gen_pkt((void*)0, &s_pIOU_Sfp_Payload->iouGetTempResponseFrame, 5, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
+		fsp_gen_pkt((void*)0, (uint8_t *)&s_pIOU_Sfp_Payload->iouGetTempResponseFrame, 5, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
  		fsp_encode(&s_IOU_FspPacket, encode_frame, &frame_len);
-		usart1_send_array(encode_frame, frame_len);
+		usart1_send_array((const char *)&encode_frame, frame_len);
 	}
 }
 void copc_iou_get_temp_setpoint(void)
@@ -330,17 +352,76 @@ void copc_iou_get_temp_setpoint(void)
 		return;
 	uint8_t encode_frame[FSP_PKT_MAX_LENGTH];
 	uint8_t frame_len;
-	uint16_t setpoint = (uint16_t)temperature_get_setpoint(channel);
+	int16_t setpoint = (int16_t)temperature_get_setpoint(channel);
 	
 	s_pIOU_Sfp_Payload->iouGetTempSetpointResponseFrame.Cmd = s_pCOPC_Sfp_Payload->commonFrame.Cmd;
 	s_pIOU_Sfp_Payload->iouGetTempSetpointResponseFrame.channel = channel;
 	s_pIOU_Sfp_Payload->iouGetTempSetpointResponseFrame.temperature_high = (uint8_t)(setpoint >> 8);
-	s_pIOU_Sfp_Payload->iouGetTempSetpointResponseFrame.temperature_low = (uint8_t)(setpoint);
+	s_pIOU_Sfp_Payload->iouGetTempSetpointResponseFrame.temperature_low = (uint8_t)setpoint;
 	
-	fsp_gen_pkt((void*)0, &s_pIOU_Sfp_Payload->iouGetTempSetpointResponseFrame, 4, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
+	fsp_gen_pkt((void*)0, (uint8_t *)&s_pIOU_Sfp_Payload->iouGetTempSetpointResponseFrame, 4, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
 	fsp_encode(&s_IOU_FspPacket, encode_frame, &frame_len);
-	usart1_send_array(encode_frame, frame_len);
+	usart1_send_array((const char *)&encode_frame, frame_len);
 }
+
+void copc_iou_tec_status(void)
+{
+	uint8_t encode_frame[FSP_PKT_MAX_LENGTH];
+	uint8_t frame_len;
+	uint16_t temp;
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Cmd = s_pCOPC_Sfp_Payload->commonFrame.Cmd;
+	
+	//temp
+	temp = temperature_get_NTC(0);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Temp_NTC_channel_0 = (temp << 8) | (temp >> 8);
+	temp = temperature_get_NTC(1);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Temp_NTC_channel_1 = (temp << 8) | (temp >> 8);
+	temp = temperature_get_NTC(2);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Temp_NTC_channel_2 = (temp << 8) | (temp >> 8);
+	temp = temperature_get_NTC(3);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Temp_NTC_channel_3 = (temp << 8) | (temp >> 8);
+	temp = temperature_get_bmp390();
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Temp_i2c_sensor	= (temp << 8) | (temp >> 8);
+	//setpoint
+	temp = temperature_get_setpoint(0);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Temp_setpoint_channel_0 = (temp << 8) | (temp >> 8);
+	temp = temperature_get_setpoint(1);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Temp_setpoint_channel_1 = (temp << 8) | (temp >> 8);
+	temp = temperature_get_setpoint(2);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Temp_setpoint_channel_2 = (temp << 8) | (temp >> 8);
+	temp = temperature_get_setpoint(3);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Temp_setpoint_channel_3 = (temp << 8) | (temp >> 8);
+	//voltage
+	temp = temperature_get_voltage_now(0);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Voltage_out_now_tec_channel_0 = (temp << 8) | (temp >> 8);
+	temp = temperature_get_voltage_now(1);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Voltage_out_now_tec_channel_1 = (temp << 8) | (temp >> 8);
+	temp = temperature_get_voltage_now(2);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Voltage_out_now_tec_channel_2 = (temp << 8) | (temp >> 8);
+	temp = temperature_get_voltage_now(3);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.Voltage_out_now_tec_channel_3 = (temp << 8) | (temp >> 8);
+	// TEC status
+	temp = temperature_tec_get_status();
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.TEC_auto_channel_0 = (temp & (1 << TEC0_AUTO)) >> TEC0_AUTO;
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.TEC_auto_channel_1 = (temp & (1 << TEC1_AUTO)) >> TEC1_AUTO;
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.TEC_auto_channel_2 = (temp & (1 << TEC2_AUTO)) >> TEC2_AUTO;
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.TEC_auto_channel_3 = (temp & (1 << TEC3_AUTO)) >> TEC3_AUTO;
+	
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.TEC_ena_channel_0 = (temp & (1 << TEC0_ENA)) >> TEC0_ENA;
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.TEC_ena_channel_1 = (temp & (1 << TEC1_ENA)) >> TEC1_ENA;
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.TEC_ena_channel_2 = (temp & (1 << TEC2_ENA)) >> TEC2_ENA;
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.TEC_ena_channel_3 = (temp & (1 << TEC3_ENA)) >> TEC3_ENA;
+	
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.TEC_mode_channel_0 = temperature_get_mode(0);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.TEC_mode_channel_1 = temperature_get_mode(1);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.TEC_mode_channel_2 = temperature_get_mode(2);
+	s_pIOU_Sfp_Payload->iouGetTECResponseFrame.TEC_mode_channel_3 = temperature_get_mode(3);
+	fsp_gen_pkt((void*)0, (uint8_t *)&s_pIOU_Sfp_Payload->iouGetTECResponseFrame, 39, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
+	fsp_encode(&s_IOU_FspPacket, encode_frame, &frame_len);
+	usart1_send_array((const char *)&encode_frame, frame_len);
+	return;
+}
+
 void copc_iou_ringled_get_RGBW(void)
 {
 	uint8_t encode_frame[FSP_PKT_MAX_LENGTH];
@@ -351,9 +432,9 @@ void copc_iou_ringled_get_RGBW(void)
 	s_pIOU_Sfp_Payload->iouRingledGetRGBResponseFrame.green = RGBW.green;
 	s_pIOU_Sfp_Payload->iouRingledGetRGBResponseFrame.blue = RGBW.blue;
 	s_pIOU_Sfp_Payload->iouRingledGetRGBResponseFrame.white = RGBW.white;
-	fsp_gen_pkt((void*)0, &s_pIOU_Sfp_Payload->iouRingledGetRGBResponseFrame, 5, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
+	fsp_gen_pkt((void*)0, (uint8_t *)&s_pIOU_Sfp_Payload->iouRingledGetRGBResponseFrame, 5, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
 	fsp_encode(&s_IOU_FspPacket, encode_frame, &frame_len);
-	usart1_send_array(encode_frame, frame_len);
+	usart1_send_array((const char *)&encode_frame, frame_len);
 }
 void copc_iou_irled_get_bright(void)
 {
@@ -362,9 +443,9 @@ void copc_iou_irled_get_bright(void)
 	uint8_t duty = IR_led_get_Current_DutyCyclesPercent();
 	s_pIOU_Sfp_Payload->iouIRledGetBrightResponseFrame.Cmd = s_pCOPC_Sfp_Payload->commonFrame.Cmd;
 	s_pIOU_Sfp_Payload->iouIRledGetBrightResponseFrame.duty =duty;
-	fsp_gen_pkt((void*)0, &s_pIOU_Sfp_Payload->iouIRledGetBrightResponseFrame, 2, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
+	fsp_gen_pkt((void*)0, (uint8_t *)&s_pIOU_Sfp_Payload->iouIRledGetBrightResponseFrame, 2, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
 	fsp_encode(&s_IOU_FspPacket, encode_frame, &frame_len);
-	usart1_send_array(encode_frame, frame_len);
+	usart1_send_array((const char *)&encode_frame, frame_len);
 }
 void copc_iou_get_accel_gyro(void)
 {	
@@ -385,21 +466,21 @@ void copc_iou_get_accel_gyro(void)
 	s_pIOU_Sfp_Payload->iouGetAccelGyroResponseFrame.gyro_y_low = (uint8_t)gyro_data.y;
 	s_pIOU_Sfp_Payload->iouGetAccelGyroResponseFrame.gyro_z_high = (uint8_t)(gyro_data.z >> 8);
 	s_pIOU_Sfp_Payload->iouGetAccelGyroResponseFrame.gyro_z_low = (uint8_t)gyro_data.z;
-	fsp_gen_pkt((void*)0, &s_pIOU_Sfp_Payload->iouGetAccelGyroResponseFrame, 13, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
+	fsp_gen_pkt((void*)0, (uint8_t *)&s_pIOU_Sfp_Payload->iouGetAccelGyroResponseFrame, 13, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
 	fsp_encode(&s_IOU_FspPacket, encode_frame, &frame_len);
-	usart1_send_array(encode_frame, frame_len);
+	usart1_send_array((const char *)&encode_frame, frame_len);
 }
 void copc_iou_get_press(void)
 {
 	uint8_t encode_frame[FSP_PKT_MAX_LENGTH];
 	uint8_t frame_len;
-	uint16_t pressure = get_pressure();
+	int16_t pressure = get_pressure();
 	s_pIOU_Sfp_Payload->iouGetPressResponseFrame.Cmd = s_pCOPC_Sfp_Payload->commonFrame.Cmd;
-	s_pIOU_Sfp_Payload->iouGetPressResponseFrame.pressure_high = (uint8_t)(pressure >> 8);
-	s_pIOU_Sfp_Payload->iouGetPressResponseFrame.pressure_high = (uint8_t)pressure;
-	fsp_gen_pkt((void*)0, &s_pIOU_Sfp_Payload->iouGetPressResponseFrame, 3, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
+	s_pIOU_Sfp_Payload->iouGetPressResponseFrame.pressure_high = pressure >> 8;
+	s_pIOU_Sfp_Payload->iouGetPressResponseFrame.pressure_low = pressure;
+	fsp_gen_pkt((void*)0, (uint8_t *)&s_pIOU_Sfp_Payload->iouGetPressResponseFrame, 3, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
 	fsp_encode(&s_IOU_FspPacket, encode_frame, &frame_len);
-	usart1_send_array(encode_frame, frame_len);
+	usart1_send_array((const char *)&encode_frame, frame_len);
 }
 
 void copc_iou_get_param(void)
@@ -432,16 +513,16 @@ void copc_iou_get_param(void)
 	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Temp_i2c_sensor_high = (uint8_t)(temp >> 8);
 	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Temp_i2c_sensor_low = (uint8_t)temp;
 	// GET TEMP SETPOINT
-	temp = (uint16_t)temperature_get_setpoint(0);
+	temp = temperature_get_setpoint(0);
 	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Temp_setpoint_channel_0_high = (uint8_t)(temp >> 8);
 	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Temp_setpoint_channel_0_low = (uint8_t)temp;
-	temp = (uint16_t)temperature_get_setpoint(1);
+	temp = temperature_get_setpoint(1);
 	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Temp_setpoint_channel_1_high = (uint8_t)(temp >> 8);
 	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Temp_setpoint_channel_1_low = (uint8_t)temp;
-	temp = (uint16_t)temperature_get_setpoint(2);
+	temp = temperature_get_setpoint(2);
 	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Temp_setpoint_channel_2_high = (uint8_t)(temp >> 8);
 	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Temp_setpoint_channel_2_low = (uint8_t)temp;
-	temp = (uint16_t)temperature_get_setpoint(3);
+	temp = temperature_get_setpoint(3);
 	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Temp_setpoint_channel_3_high = (uint8_t)(temp >> 8);
 	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Temp_setpoint_channel_3_low = (uint8_t)temp;
 	// GET VOLTAGE OUTPUT TEC
@@ -459,14 +540,27 @@ void copc_iou_get_param(void)
 	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Voltage_out_tec_channel_3_low = (uint8_t)voltage;
 	// GET NEO LED DATA
 	rgbw_color RGBW = ringled_get_RGBW();
-	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Neo_led_R = (uint8_t)RGBW.red;
-	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Neo_led_G = (uint8_t)RGBW.green;
-	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Neo_led_B = (uint8_t)RGBW.blue;
-	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Neo_led_W = (uint8_t)RGBW.white;
+	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Neo_led_R = RGBW.red;
+	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Neo_led_G = RGBW.green;
+	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Neo_led_B = RGBW.blue;
+	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.Neo_led_W = RGBW.white;
 	// GET IR LED BRIGHT
 	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.IRled_duty = (uint8_t)IR_led_get_Current_DutyCyclesPercent();
+	// GET ACCEL
+	Accel_Gyro_DataTypedef a_g_data = get_acceleration();
+	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.accel_x = (a_g_data.x << 8) | (a_g_data.x >> 8);
+	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.accel_y = (a_g_data.y << 8) | (a_g_data.y >> 8);
+	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.accel_z = (a_g_data.z << 8) | (a_g_data.z >> 8);
+	// GET GYRO
+	a_g_data = get_gyroscope();
+	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.gyro_x = (a_g_data.x << 8) | (a_g_data.x >> 8);
+	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.gyro_y = (a_g_data.y << 8) | (a_g_data.y >> 8);
+	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.gyro_z = (a_g_data.z << 8) | (a_g_data.z >> 8);
+	// GET PRESS
+	temp = get_pressure();
+	s_pIOU_Sfp_Payload->iouGetParamResponseFrame.press = (temp << 8) | (temp >> 8);
 	// DECODE FRAME
-	fsp_gen_pkt((void*)0, &s_pIOU_Sfp_Payload->iouGetParamResponseFrame, 36, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
+	fsp_gen_pkt((void*)0, (uint8_t *)&s_pIOU_Sfp_Payload->iouGetParamResponseFrame, 50, FSP_ADR_COPC, FSP_PKT_TYPE_CMD_W_DATA, &s_IOU_FspPacket);
 	fsp_encode(&s_IOU_FspPacket, encode_frame, &frame_len);
-	usart1_send_array(encode_frame, frame_len);
+	usart1_send_array((const char *)&encode_frame, frame_len);
 }

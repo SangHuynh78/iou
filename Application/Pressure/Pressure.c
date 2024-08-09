@@ -6,7 +6,6 @@
  */ 
 
 #include "Pressure.h"
-#include "uart.h"
 
 /* Private define ------------------------------------------------------------*/
 /* Private function ----------------------------------------------------------*/
@@ -26,7 +25,7 @@ static BMP390_TaskContextTypedef           s_pressure_task_context =
 	{
 		SCH_TASK_SYNC,                      // taskType;
 		SCH_TASK_PRIO_0,                    // taskPriority;
-		3000,								// taskPeriodInMS;
+		300,								// taskPeriodInMS;
 		pressure_update						// taskFunction;
 	}
 };
@@ -40,7 +39,7 @@ bool Pressure_init(void)
 {
 	if (!BMP390_init())
 	{
-		usart0_send_string("BMP390 is unavailble \r\n> ");
+		usart0_send_string("BMP390 is fail\r\n> ");
 		return false;
 	}
 	return true;
@@ -51,7 +50,7 @@ void Pressure_create_task(void)
 	SCH_TASK_CreateTask(&s_pressure_task_context.taskHandle, &s_pressure_task_context.taskProperty);
 }
 
-uint16_t get_pressure(void)
+int16_t get_pressure(void)
 {
-	return (uint16_t)get_BMP390_pressure();
+	return get_BMP390_pressure();
 }

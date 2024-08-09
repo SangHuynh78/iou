@@ -26,7 +26,7 @@ void pwm1_init(const uint8_t _Pin, const uint16_t _TimePeriodUs, const uint8_t _
 	
 	ICR1  = _TimePeriodUs * 0.125;					// Voi F = 8M thi T = 0.125us, va prescaler = 64 nen T' = 8us
 	
-	OCR1B = _DutyCyclePercent * ICR1 * 0.01;		// Output Compare
+	OCR1B = _DutyCyclePercent * 0.52 * ICR1 * 0.01;		// Output Compare
 }
 
 void pwm2_init(const uint8_t _Pin, const uint16_t _TimePeriodUs, const uint8_t _DutyCyclePercent)
@@ -39,19 +39,19 @@ void pwm2_init(const uint8_t _Pin, const uint16_t _TimePeriodUs, const uint8_t _
 	
 	TCCR1A |= (1 << COM1C1);				// Clear OC1A on compare match, set OC1A at BOTTOM (non-inverting mode)
 	
-	TCCR1B |= (1 << CS11) | (1 << CS10);	// Set prescaler to 64 and start the timer
+	TCCR1B |= (1 << CS11);					// Set prescaler to 8 and start the timer
 	
-	ICR1  = _TimePeriodUs * 0.125;					// Voi F = 8M thi T = 0.125us, va prescaler = 64 nen T' = 8us
+	ICR1  = _TimePeriodUs * 0.125;					// Voi F = 8M thi T = 0.125us, va prescaler = 8 nen T' = 1us
 	
-	OCR1C = _DutyCyclePercent * ICR1 * 0.01;		// Output Compare
+	OCR1C = _DutyCyclePercent * 0.52 * ICR1 * 0.01;		// Output Compare
 }
 
 void pwm1_set_DutyCyclePercent(const uint8_t _DutyCyclePercent)
 {
-	OCR1B = _DutyCyclePercent * ICR1 * 0.01;
+	OCR1B = _DutyCyclePercent * 0.52 * ICR1 * 0.01;
 }
 
 void pwm2_set_DutyCyclePercent(const uint8_t _DutyCyclePercent)
 {
-	OCR1C = _DutyCyclePercent * ICR1 * 0.01;
+	OCR1C = _DutyCyclePercent * 0.52 * ICR1 * 0.01;
 }

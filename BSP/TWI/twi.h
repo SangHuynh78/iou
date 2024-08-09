@@ -22,7 +22,6 @@
 #ifndef twi_h
 #define twi_h
 
-#define F_CPU 8000000
 	#include <inttypes.h>
 	#include <math.h>
 	#include <stdlib.h>
@@ -51,18 +50,25 @@
 	#define MY_ADDRESS   0x01
 	#define SLV_ADDRESS  0x02
   
-	uint8_t* twi_get_master_tx_Buffer();
-	uint8_t* twi_get_master_rx_Buffer();
-	uint8_t* twi_get_slv_tx_Buffer();
-	uint8_t* twi_get_slv_rx_Buffer();
+	typedef enum {
+		TWI_SUCCESS				= 0,   // No error
+		TWI_ERROR_NO_ACK		= 1,   // No acknowledgment received
+		TWI_ERROR_TIMEOUT		= 2,   // Timeout occurred
+		TWI_ERROR_UNKNOWN		= 3   // Unknown error
+	} TWI_ERROR;
+	
+	uint8_t* twi_get_master_tx_Buffer(void);
+	uint8_t* twi_get_master_rx_Buffer(void);
+	uint8_t* twi_get_slv_tx_Buffer(void);
+	uint8_t* twi_get_slv_rx_Buffer(void);
 	
 	void twi_init(void);
-	void twi_start(void);
-	void twi_stop(void);
-	void twi_write(uint8_t data);
+	uint8_t twi_start(void);
+	uint8_t twi_stop(void);
+	uint8_t twi_write(uint8_t data);
   
-	uint8_t twi_read_ack(void);
-	uint8_t twi_read_nack(void);
+	uint16_t twi_read_ack(void);
+	uint16_t twi_read_nack(void);
 	void twi_disable(void);
 	void twi_setAddress(uint8_t);
 	void twi_setFrequency(uint32_t);
